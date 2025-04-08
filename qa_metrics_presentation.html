@@ -1,0 +1,162 @@
+<!doctype html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <title>QA Metric Update</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.3.1/reveal.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.3.1/theme/white.min.css">
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+</head>
+
+<body>
+    <div class="reveal">
+        <div class="slides">
+
+            <section>
+                <h1>Update on QA Metric Writing in Agent Studio</h1>
+            </section>
+
+            <section>
+                <h2>TL/DR - What's Changed?</h2>
+                <ul>
+                    <li>QA Metrics now based on closest retrieved topic from user's input or agent's response per turn
+                    </li>
+                    <li>More control: add similar utterances to sample questions to improve retrieval</li>
+                </ul>
+            </section>
+
+            <section>
+                <h2>Why Was This Change Made?</h2>
+                <ul>
+                    <li>Human-annotated data via custom Atlas component (thanks Josh!)</li>
+                    <li>Ground truth used to evaluate multiple methods</li>
+                    <li>hopper-us-consumer-usp (131), brittain-usp (175)</li>
+                    <li>Chosen method had best accuracy vs human-annotated labels</li>
+                </ul>
+                <p><em>*PLACEHOLDER: Insert your own graph here*</em></p>
+            </section>
+
+            <section>
+                <h2>How it Works Under the Hood: Part 1</h2>
+                <ul>
+                    <li>Each utterance & topic/sample is embedded into a vector</li>
+                    <li>Cosine distance used to score similarity</li>
+                </ul>
+                <p><em>*INSERT SCREENSHOT OF DD LOGS HERE*</em></p>
+            </section>
+
+            <section>
+                <h2>How it Works Under the Hood: Part 2</h2>
+                <div id="embeddingPlot" style="width: 800px; height: 600px;"></div>
+                <script>
+                    const origin = { x: 0, y: 0, z: 0 };
+
+                    const vectors = [
+                        {
+                            name: "Utterance: 'Ada is adorable'",
+                            x: 0.1, y: 0.2, z: 0.3,
+                            colour: 'red'
+                        },
+                        {
+                            name: "Topic: 'ada-lovelace'",
+                            x: 0.5, y: 0.6, z: 0.1,
+                            colour: 'lightgrey'
+                        },
+                        {
+                            name: "Topic: 'ada-the-bengal-cat'",
+                            x: 0.8, y: 0.3, z: 0.9,
+                            colour: 'green'
+                        }
+                    ];
+
+                    const vectorTraces = vectors.map(v => ({
+                        type: 'scatter3d',
+                        mode: 'lines+text',
+                        x: [origin.x, v.x],
+                        y: [origin.y, v.y],
+                        z: [origin.z, v.z],
+                        text: [null, v.name],
+                        textposition: 'top center',
+                        line: {
+                            width: 6,
+                            color: v.colour
+                        },
+                        marker: {
+                            size: 3
+                        }
+                    }));
+
+                    const layout = {
+                        title: 'Cosine Distance Between Utterance and Topics',
+                        scene: {
+                            xaxis: { title: 'X' },
+                            yaxis: { title: 'Y' },
+                            zaxis: { title: 'Z' }
+                        },
+                        annotations: [
+                            {
+                                x: 0.8, y: 0.3, z: 0.9,
+                                text: 'Angle ≈ 25°',
+                                ax: 0, ay: 0, az: 0,
+                                arrowhead: 2,
+                                showarrow: true
+                            },
+                            {
+                                x: 0.5, y: 0.6, z: 0.1,
+                                text: 'Angle ≈ 60°',
+                                ax: 0, ay: 0, az: 0,
+                                arrowhead: 2,
+                                showarrow: true
+                            }
+                        ]
+                    };
+
+                    Plotly.newPlot('embeddingPlot', vectorTraces, layout);
+                </script>
+                <p>Lower score = more similar (0 = identical)</p>
+            </section>
+
+            <section>
+                <h2>How Metrics Are Written (Part 3)</h2>
+                <pre>
+U: Why is Ada the best cat in the whole world?
+S: Because of her cute face and her adorable personality
+        </pre>
+                <ol>
+                    <li class="fragment">Retrieve closest topic for user's input (if score < threshold) <ul
+                            class="fragment">
+                    <li>(ada-the-bengal-cat, 0.11)</li>
+                    <li>(cat-breeds-general, 0.44)</li>
+                    <li>(ada-lovelace, 0.68)</li>
+                    </ul>
+                    </li>
+                    <li class="fragment">Retrieve closest topic for agent's response (if score < threshold) <ul
+                            class="fragment">
+                    <li>(cat-personality-traits, 0.29)</li>
+                    <li>(cat-cuteness, 0.33)</li>
+                    <li>(ada-lovelace, 0.77)</li>
+                    </ul>
+                    </li>
+                    <li class="fragment">Write QA metric based on retrieved topic
+                        <ul class="fragment">
+                            <li>Topic: ada-the-bengal-cat → QA metric written</li>
+                        </ul>
+                    </li>
+                </ol>
+            </section>
+
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.3.1/reveal.min.js"></script>
+    <script>
+        Reveal.initialize({
+            hash: true,
+            slideNumber: true,
+            plugins: []
+        });
+    </script>
+</body>
+
+</html>
