@@ -5,7 +5,11 @@
     <meta charset="utf-8">
     <title>QA Metric Update</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.3.1/reveal.min.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.3.1/theme/white.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.3.1/theme/night.min.css">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/styles/atom-one-dark.min.css">
     <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
 </head>
 
@@ -14,20 +18,20 @@
         <div class="slides">
 
             <section>
-                <h1>Update on QA Metric Writing in Agent Studio</h1>
+                <h3>Update on <br>✨ QA Metric Writing ✨<br> in Agent Studio</h3>
             </section>
 
             <section>
-                <h2>TL/DR - What's Changed?</h2>
+                <h3>TL/DR - What's Changed?</h3>
                 <ul>
-                    <li>QA Metrics now based on closest retrieved topic from user's input or agent's response per turn
+                    <li><p>QA Metrics now based on closest retrieved topic from <b>either</b> the user's input or agent's response per turn</p>
                     </li>
                     <li>More control: add similar utterances to sample questions to improve retrieval</li>
                 </ul>
             </section>
 
             <section>
-                <h2>Why Was This Change Made?</h2>
+                <h3>Why Was This Change Made?</h3>
                 <ul>
                     <li>Human-annotated data via custom Atlas component (thanks Josh!)</li>
                     <li>Ground truth used to evaluate multiple methods</li>
@@ -35,6 +39,237 @@
                     <li>Chosen method had best accuracy vs human-annotated labels</li>
                 </ul>
                 <p><em>*PLACEHOLDER: Insert your own graph here*</em></p>
+            </section>
+
+            <section>
+                <h3>Vector Embeddings Example</h3>
+
+                <div class="container">
+                    <div class="row align-items-center">
+                        <div class="col position-relative">
+                            <p class="position-absolute label utterance-label">Utterance</p>
+                            <pre><code class="language-text" data-trim data-noescape>Ada is adorable</code></pre>
+                        </div>
+                        <div class="col text-center">
+                            <i class="bi bi-arrow-right text-secondary"></i>
+                        </div>
+                        <div class="col-5">
+                            <pre><code class="language-javascript" data-trim data-noescape>[0.1, 0.2, 0.3]</code></pre>
+                        </div>
+                    </div>
+
+                    <div class="row align-items-center">
+                        <div class="col position-relative">
+                            <p class="position-absolute top-1 label topic-label">Topic</p>
+                            <pre><code class="language-text" data-trim data-noescape>ada-lovelace</code></pre>
+                        </div>
+                        <div class="col text-center">
+                            <i class="bi bi-arrow-right text-secondary"></i>
+                        </div>
+                        <div class="col-5">
+                            <pre><code class="language-javascript small-text" data-trim data-noescape>
+                                [0.5, 0.6, 0.1] // content
+                                [0.5, 0.6, 0.1] // sample_question_1
+                                [0.5, 0.6, 0.1] // sample_question_2
+                            </code></pre>
+                        </div>
+                    </div>
+
+                    <div class="row align-items-center">
+                        <div class="col position-relative">
+                            <p class="position-absolute top-1 label topic-label">Topic</p>
+                            <pre><code class="language-text" data-trim data-noescape>ada-the-bengal-cat</code></pre>
+                        </div>
+                        <div class="col text-center">
+                            <i class="bi bi-arrow-right text-secondary"></i>
+                        </div>
+                        <div class="col-5">
+                            <pre><code class="language-javascript small-text" data-trim data-noescape>
+                                [0.5, 0.6, 0.1] // content
+                                [0.5, 0.6, 0.1] // sample_question_1
+                                [0.5, 0.6, 0.1] // sample_question_2
+                            </code></pre>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section>
+                <div class="row mb-2">
+                    <h4>Vector Embeddings Visualization</h4>
+                </div>
+                <div class="row ">
+                    <div id="embeddingPlot" class="w-100 h-100 d-flex align-items-center justify-content-center"></div>
+                    <script>
+                        const origin = { x: 0, y: 0, z: 0 };
+                        // Helper function to calculate magnitude
+                        function magnitude(x, y, z) {
+                            return Math.sqrt(x * x + y * y + z * z);
+                        }
+                        // Original vectors with their magnitudes
+                        const rawVectors = [
+                            {
+                                name: "Utterance: 'Ada is adorable'",
+                                x: 0.1, y: 0.2, z: 0.3,
+                                colour: 'red'
+                            },
+                            {
+                                name: "Topic: 'ada-lovelace'",
+                                x: 0.8, y: 0.8, z: 0.2,
+                                colour: 'lightgrey'
+                            },
+                            {
+                                name: "Topic: 'ada-the-bengal-cat'",
+                                x: 0.1, y: 0.2, z: 0.2,
+                                colour: 'green'
+                            }
+                        ];
+                        // Create animation frames
+                        const frames = [];
+                        const numFrames = 30;
+                        for (let i = 0; i <= numFrames; i++) {
+                            const t = i / numFrames; // interpolation factor
+                            const vectors = rawVectors.map(v => {
+                                const mag = magnitude(v.x, v.y, v.z);
+                                const normalizedX = v.x / mag;
+                                const normalizedY = v.y / mag;
+                                const normalizedZ = v.z / mag;
+                                return {
+                                    ...v,
+                                    x: v.x * (1 - t) + normalizedX * t,
+                                    y: v.y * (1 - t) + normalizedY * t,
+                                    z: v.z * (1 - t) + normalizedZ * t
+                                };
+                            });
+                            frames.push({
+                                name: `frame${i}`,
+                                data: vectors.map(v => ({
+                                    type: 'scatter3d',
+                                    mode: 'lines+text',
+                                    x: [origin.x, v.x],
+                                    y: [origin.y, v.y],
+                                    z: [origin.z, v.z],
+                                    text: [null, v.name],
+                                    textposition: 'top center',
+                                    line: {
+                                        width: 6,
+                                        color: v.colour
+                                    },
+                                    marker: {
+                                        size: 3
+                                    }
+                                }))
+                            });
+                        }
+                        // Initial vectors (unnormalized)
+                        const vectors = rawVectors;
+                        const vectorTraces = vectors.map(v => ({
+                            type: 'scatter3d',
+                            mode: 'lines+text',
+                            x: [origin.x, v.x],
+                            y: [origin.y, v.y],
+                            z: [origin.z, v.z],
+                            text: [null, v.name],
+                            textposition: 'top center',
+                            line: {
+                                width: 6,
+                                color: v.colour
+                            },
+                            marker: {
+                                size: 3
+                            }
+                        }));
+                        const layout = {
+                            title: 'Vector Embeddings in 3D Space',
+                            scene: {
+                                xaxis: {
+                                    title: '',
+                                    showgrid: false,
+                                    zeroline: false,
+                                    showline: false,
+                                    showticklabels: false
+                                },
+                                yaxis: {
+                                    title: '',
+                                    showgrid: false,
+                                    zeroline: false,
+                                    showline: false,
+                                    showticklabels: false
+                                },
+                                zaxis: {
+                                    title: '',
+                                    showgrid: false,
+                                    zeroline: false,
+                                    showline: false,
+                                    showticklabels: false
+                                }
+                            },
+                            updatemenus: [{
+                                type: 'buttons',
+                                showactive: true,
+                                buttons: [
+                                    {
+                                        label: 'Show Axes',
+                                        method: 'relayout',
+                                        args: [{
+                                            'scene.xaxis.showgrid': true,
+                                            'scene.yaxis.showgrid': true,
+                                            'scene.zaxis.showgrid': true,
+                                            'scene.xaxis.zeroline': true,
+                                            'scene.yaxis.zeroline': true,
+                                            'scene.zaxis.zeroline': true,
+                                            'scene.xaxis.showline': true,
+                                            'scene.yaxis.showline': true,
+                                            'scene.zaxis.showline': true,
+                                            'scene.xaxis.showticklabels': true,
+                                            'scene.yaxis.showticklabels': true,
+                                            'scene.zaxis.showticklabels': true,
+                                            'scene.xaxis.title.text': 'X',
+                                            'scene.yaxis.title.text': 'Y',
+                                            'scene.zaxis.title.text': 'Z'
+                                        }]
+                                    },
+                                    {
+                                        label: 'Hide Axes',
+                                        method: 'relayout',
+                                        args: [{
+                                            'scene.xaxis.showgrid': false,
+                                            'scene.yaxis.showgrid': false,
+                                            'scene.zaxis.showgrid': false,
+                                            'scene.xaxis.zeroline': false,
+                                            'scene.yaxis.zeroline': false,
+                                            'scene.zaxis.zeroline': false,
+                                            'scene.xaxis.showline': false,
+                                            'scene.yaxis.showline': false,
+                                            'scene.zaxis.showline': false,
+                                            'scene.xaxis.showticklabels': false,
+                                            'scene.yaxis.showticklabels': false,
+                                            'scene.zaxis.showticklabels': false,
+                                            'scene.xaxis.title.text': '',
+                                            'scene.yaxis.title.text': '',
+                                            'scene.zaxis.title.text': ''
+                                        }]
+                                    },
+                                    {
+                                        label: 'Animate Normalization',
+                                        method: 'animate',
+                                        args: [null, {
+                                            mode: 'immediate',
+                                            frame: { duration: 1, redraw: true },
+                                            transition: { duration: 1 }
+                                        }]
+                                    }
+                                ]
+                            }]
+                        };
+                        // Create the initial plot
+                        Plotly.newPlot('embeddingPlot', vectorTraces, layout).then(function () {
+                            // Add the frames after the plot is created
+                            Plotly.addFrames('embeddingPlot', frames);
+                        });
+                    </script>
+                    <p>Each vector represents an utterance or topic in 3D space</p>
+                </div>
             </section>
 
             <section>
@@ -48,11 +283,17 @@
 
             <section>
                 <h2>How it Works Under the Hood: Part 2</h2>
-                <div id="embeddingPlot" style="width: 800px; height: 600px;"></div>
+                <div id="embeddingPlot2" style="width: 800px; height: 600px;"></div>
                 <script>
-                    const origin = { x: 0, y: 0, z: 0 };
+                    const origin2 = { x: 0, y: 0, z: 0 };
 
-                    const vectors = [
+                    // Helper function to calculate magnitude
+                    function magnitude2(x, y, z) {
+                        return Math.sqrt(x * x + y * y + z * z);
+                    }
+
+                    // Original vectors with their magnitudes
+                    const rawVectors2 = [
                         {
                             name: "Utterance: 'Ada is adorable'",
                             x: 0.1, y: 0.2, z: 0.3,
@@ -70,12 +311,56 @@
                         }
                     ];
 
-                    const vectorTraces = vectors.map(v => ({
+                    // Create animation frames
+                    const frames2 = [];
+                    const numFrames2 = 30;
+
+                    for (let i = 0; i <= numFrames2; i++) {
+                        const t = i / numFrames2; // interpolation factor
+                        const vectors = rawVectors2.map(v => {
+                            const mag = magnitude2(v.x, v.y, v.z);
+                            const normalizedX = v.x / mag;
+                            const normalizedY = v.y / mag;
+                            const normalizedZ = v.z / mag;
+
+                            return {
+                                ...v,
+                                x: v.x * (1 - t) + normalizedX * t,
+                                y: v.y * (1 - t) + normalizedY * t,
+                                z: v.z * (1 - t) + normalizedZ * t
+                            };
+                        });
+
+                        frames2.push({
+                            name: `frame${i}`,
+                            data: vectors.map(v => ({
+                                type: 'scatter3d',
+                                mode: 'lines+text',
+                                x: [origin2.x, v.x],
+                                y: [origin2.y, v.y],
+                                z: [origin2.z, v.z],
+                                text: [null, v.name],
+                                textposition: 'top center',
+                                line: {
+                                    width: 6,
+                                    color: v.colour
+                                },
+                                marker: {
+                                    size: 3
+                                }
+                            }))
+                        });
+                    }
+
+                    // Initial vectors (unnormalized)
+                    const vectors2 = rawVectors2;
+
+                    const vectorTraces2 = vectors2.map(v => ({
                         type: 'scatter3d',
                         mode: 'lines+text',
-                        x: [origin.x, v.x],
-                        y: [origin.y, v.y],
-                        z: [origin.z, v.z],
+                        x: [origin2.x, v.x],
+                        y: [origin2.y, v.y],
+                        z: [origin2.z, v.z],
                         text: [null, v.name],
                         textposition: 'top center',
                         line: {
@@ -87,42 +372,103 @@
                         }
                     }));
 
-                    const layout = {
+                    const layout2 = {
                         title: 'Cosine Distance Between Utterance and Topics',
                         scene: {
-                            xaxis: { title: 'X' },
-                            yaxis: { title: 'Y' },
-                            zaxis: { title: 'Z' }
-                        },
-                        annotations: [
-                            {
-                                x: 0.8, y: 0.3, z: 0.9,
-                                text: 'Angle ≈ 25°',
-                                ax: 0, ay: 0, az: 0,
-                                arrowhead: 2,
-                                showarrow: true
+                            xaxis: {
+                                title: '',
+                                showgrid: false,
+                                zeroline: false,
+                                showline: false,
+                                showticklabels: false
                             },
-                            {
-                                x: 0.5, y: 0.6, z: 0.1,
-                                text: 'Angle ≈ 60°',
-                                ax: 0, ay: 0, az: 0,
-                                arrowhead: 2,
-                                showarrow: true
+                            yaxis: {
+                                title: '',
+                                showgrid: false,
+                                zeroline: false,
+                                showline: false,
+                                showticklabels: false
+                            },
+                            zaxis: {
+                                title: '',
+                                showgrid: false,
+                                zeroline: false,
+                                showline: false,
+                                showticklabels: false
                             }
-                        ]
+                        },
+                        updatemenus: [{
+                            type: 'buttons',
+                            showactive: true,
+                            buttons: [
+                                {
+                                    label: 'Show Axes',
+                                    method: 'relayout',
+                                    args: [{
+                                        'scene.xaxis.showgrid': true,
+                                        'scene.yaxis.showgrid': true,
+                                        'scene.zaxis.showgrid': true,
+                                        'scene.xaxis.zeroline': true,
+                                        'scene.yaxis.zeroline': true,
+                                        'scene.zaxis.zeroline': true,
+                                        'scene.xaxis.showline': true,
+                                        'scene.yaxis.showline': true,
+                                        'scene.zaxis.showline': true,
+                                        'scene.xaxis.showticklabels': true,
+                                        'scene.yaxis.showticklabels': true,
+                                        'scene.zaxis.showticklabels': true,
+                                        'scene.xaxis.title.text': 'X',
+                                        'scene.yaxis.title.text': 'Y',
+                                        'scene.zaxis.title.text': 'Z'
+                                    }]
+                                },
+                                {
+                                    label: 'Hide Axes',
+                                    method: 'relayout',
+                                    args: [{
+                                        'scene.xaxis.showgrid': false,
+                                        'scene.yaxis.showgrid': false,
+                                        'scene.zaxis.showgrid': false,
+                                        'scene.xaxis.zeroline': false,
+                                        'scene.yaxis.zeroline': false,
+                                        'scene.zaxis.zeroline': false,
+                                        'scene.xaxis.showline': false,
+                                        'scene.yaxis.showline': false,
+                                        'scene.zaxis.showline': false,
+                                        'scene.xaxis.showticklabels': false,
+                                        'scene.yaxis.showticklabels': false,
+                                        'scene.zaxis.showticklabels': false,
+                                        'scene.xaxis.title.text': '',
+                                        'scene.yaxis.title.text': '',
+                                        'scene.zaxis.title.text': ''
+                                    }]
+                                },
+                                {
+                                    label: 'Animate Normalization',
+                                    method: 'animate',
+                                    args: [null, {
+                                        mode: 'immediate',
+                                        frame: { duration: 1, redraw: true },
+                                        transition: { duration: 1 }
+                                    }]
+                                }
+                            ]
+                        }]
                     };
 
-                    Plotly.newPlot('embeddingPlot', vectorTraces, layout);
+                    // Create the initial plot
+                    Plotly.newPlot('embeddingPlot2', vectorTraces2, layout2).then(function () {
+                        // Add the frames after the plot is created
+                        Plotly.addFrames('embeddingPlot2', frames2);
+                    });
                 </script>
                 <p>Lower score = more similar (0 = identical)</p>
             </section>
 
             <section>
                 <h2>How Metrics Are Written (Part 3)</h2>
-                <pre>
-U: Why is Ada the best cat in the whole world?
-S: Because of her cute face and her adorable personality
-        </pre>
+                <pre><code class="language-text" data-trim data-noescape>U: Why is Ada the best cat in the whole world?
+S: Because of her cute face and her adorable personality</code></pre>
                 <ol>
                     <li class="fragment">Retrieve closest topic for user's input (if score < threshold) <ul
                             class="fragment">
@@ -150,11 +496,16 @@ S: Because of her cute face and her adorable personality
     </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.3.1/reveal.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/highlight.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.3.1/plugin/highlight/highlight.min.js"></script>
     <script>
         Reveal.initialize({
             hash: true,
             slideNumber: true,
-            plugins: []
+            width: 1200,
+            height: 700,
+            margin: 0.1,
+            plugins: [ RevealHighlight ]
         });
     </script>
 </body>
